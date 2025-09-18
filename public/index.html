@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Chatbot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      background: #3b82f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .chat-container {
+      background: white;
+      width: 90%;
+      height: 90%;
+      border-radius: 20px;
+      box-shadow: 0px 6px 18px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      background: #2563eb;
+      color: white;
+      padding: 15px;
+      font-size: 1.4em;
+      font-weight: bold;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    #chat {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background: #f9fafb;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .user, .bot {
+      padding: 10px 14px;
+      border-radius: 12px;
+      margin: 8px 0;
+      max-width: 70%;
+    }
+
+    .user {
+      background: #3b82f6;
+      color: white;
+      align-self: flex-end;
+    }
+
+    .bot {
+      background: #e5e7eb;
+      color: black;
+      align-self: flex-start;
+    }
+
+    .chat-input {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      border-top: 1px solid #ddd;
+      background: white;
+      flex-shrink: 0;
+      gap: 10px;
+    }
+
+    .chat-input select,
+    .chat-input input {
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 1em;
+    }
+
+    .chat-input select {
+      width: 120px;
+    }
+
+    .chat-input input {
+      flex: 1;
+    }
+
+    .chat-input button {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 10px;
+      background: #3b82f6;
+      color: white;
+      font-size: 1em;
+      cursor: pointer;
+    }
+
+    .chat-input button:hover {
+      background: #2563eb;
+    }
+
+    .upload-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 1.4em;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">AI Edu Chatbot</div>
+    <div id="chat"></div>
+    <div class="chat-input">
+      <select id="grade">
+        <option value="general">General</option>
+        <option value="1">Grade 1</option>
+        <option value="2">Grade 2</option>
+        <option value="3">Grade 3</option>
+        <option value="4">Grade 4</option>
+        <option value="5">Grade 5</option>
+        <option value="6">Grade 6</option>
+        <option value="7">Grade 7</option>
+        <option value="8">Grade 8</option>
+        <option value="9">Grade 9</option>
+        <option value="10">Grade 10</option>
+        <option value="11">Grade 11</option>
+        <option value="12">Grade 12</option>
+      </select>
+
+      <input id="message" type="text" placeholder="Type your question..." />
+
+      <!-- Upload Photo Button moved before Send -->
+      <input type="file" id="photoInput" accept="image/*" style="display:none" />
+      <button class="upload-btn" onclick="document.getElementById('photoInput').click()">📷</button>
+
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    async function sendMessage() {
+      const input = document.getElementById("message");
+      const grade = document.getElementById("grade").value;
+      const chatBox = document.getElementById("chat");
+      const message = input.value.trim();
+      if (!message) return;
+
+      chatBox.innerHTML += `<div class="user">You (${grade}): ${message}</div>`;
+      input.value = "";
+
+      try {
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, grade })
+        });
+
+        const data = await res.json();
+        const formatted = marked.parse(data.reply || ""); 
+        chatBox.innerHTML += `<div class="bot">AI:<br>${formatted}</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+      } catch (err) {
+        chatBox.innerHTML += `<div class="bot">Error: ${err.message}</div>`;
+      }
+    }
+
+    // When a photo is selected
+    document.getElementById("photoInput").addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const chatBox = document.getElementById("chat");
+        chatBox.innerHTML += `<div class="user">📷 You uploaded: ${file.name}</div>`;
+
+        // Send image to backend
+        const formData = new FormData();
+        formData.append("photo", file);
+
+        try {
+          const res = await fetch("/upload-image", {
+            method: "POST",
+            body: formData
+          });
+          const data = await res.json();
+          chatBox.innerHTML += `<div class="bot">AI:<br>${data.reply}</div>`;
+          chatBox.scrollTop = chatBox.scrollHeight;
+        } catch (err) {
+          chatBox.innerHTML += `<div class="bot">Error: ${err.message}</div>`;
+        }
+      }
+    });
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</body>
+</html>
